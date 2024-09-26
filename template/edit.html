@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Edit
+{% endblock %}
+
+{% block body %}
+    <div class = table_container style = width:100%>
+        <table id="stats_table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Artist</th>
+            <th>Title</th>
+            <th>PreviewUrl</th>
+            <th>ImageUrl</th>
+            <th>Edit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in Database %}
+            <tr>
+                <form action = '/edit/{{room_name}}', method = 'POST'>
+                  <td>{{row.ID}}</td>
+                  <td><input value = "{{row.artist}}" class = 'edittxt' name = 'artist'></td>
+                  <td><input value = "{{row.title}}" class = 'edittxt' name = 'title'></td>
+                  <td style = width:15%><input value = "{{row.preview}}" class = 'edittxt' name = 'preview'></td>
+                  <td style = width:15%><input value = "{{row.artwork}}" class = 'edittxt' name = 'artwork'></td>
+                  <td><button name = 'song_id' id = song_id value = '{{row.ID}}'>Edit Song</button></td>
+              </form>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  </div>
+
+
+{% endblock %}

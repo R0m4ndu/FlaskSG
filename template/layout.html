@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1, width=device-width">
+        <link href="/static/styles.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+        <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <title> SongGuesser: {% block title %}{% endblock %}</title>
+    </head>
+
+      <body>
+        <div>
+        <div class="navbar" >
+          <div class = 'GameNav'>
+          <a href="{{ url_for('main') }}">Home</a>
+        <div class="subnav">
+          <button class="subnavbtn">Statistics <i class="fa fa-caret-down"></i></button>
+              <div class="subnav-content">
+                <a href= "{{url_for('profile', user = username)}}" target="_blank">Profile</a>
+                <a href="{{ url_for('records', room_name='Short') }}" target="_blank">Records</a>
+                <a href="{{ url_for('leaderboards', stat='Scores') }}" target="_blank">Leaderboards</a>
+              </div>
+          </div>
+          <div class="subnav">
+          <button class="subnavbtn">Rooms <i class="fa fa-caret-down"></i></button>
+              <div class="subnav-content">
+                  <div class = 'rooms'>
+                    {% for room in rooms %}
+                    <a href="{{url_for('room', room_name=room)}}">{{room}}</a>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+          {% if username == "Romandu" %}
+            <form method = 'POST'>
+              <div class="subnav">
+                <button disabled class="subnavbtn">Edit Playlists <i class="fa fa-caret-down"></i></button>
+                    <div class="subnav-content">
+                        <div class = 'rooms2'>
+                          {% for room in rooms %}
+                          <a href="{{url_for('edit', room_name=room)}}" target="_blank">{{room}}</a>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </div>
+            </form>
+            {% endif %}
+            <div class = logregBtn>
+              {% if username == "guest" %}
+              <a href="{{ url_for('register') }}" method = "post">Register</a>
+              <a href="{{ url_for('login') }}" method = "post">Login</a>
+              {% endif %}
+
+              {% if username != "guest" %}
+                <a href="{{ url_for('logout') }}" method = "post">Logout</a>
+              {% endif %}
+            </div>
+        </div>
+      </div>
+
+      {% block body %}{% endblock %}
+    </body>
+</html>

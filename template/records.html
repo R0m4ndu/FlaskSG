@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Records
+{% endblock %}
+
+{% block body %}
+    <div class = 'which_stats'>
+      <a style=margin-left:5px><b>Select Room:</b></a>
+      {% for room in rooms %}
+        <a href = '{{room}}' class = 'roombtn'>{{room}}</a>
+      {% endfor %}
+    </div>
+
+  <div class = table_container>
+    <table id="stats_table">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Player</th>
+        <th>Song</th>
+        <th>Record</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in Database %}
+        <tr>
+          <td>{{ loop.index0 + 1 }}</td>
+          {% if row.player == username %}
+          <td><b>{{ row.player }}</b></td>
+          {% else %}
+          <td>{{row.player}}</td>
+          {% endif %}
+          <td>{{ row.artist }} - {{row.title}}</td>
+          <td>{{ row.record }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+{% endblock %}

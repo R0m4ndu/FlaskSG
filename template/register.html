@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Login
+{% endblock %}
+
+{% block body %}
+
+{{apology}}
+<form action = /reg method = POST>
+    <br>
+    <input name = 'username' autocomplete = 'off' autofocus type = 'text' placeholder = 'username'>
+    <br>
+    <input name = 'password' autocomplete = 'off' autofocus type = 'password' placeholder = 'password'>
+    <br>
+    <input name = 'confirmation' autocomplete = 'off' autofocus type = 'password' placeholder = 'confirmation'>
+    <br>
+    <button type = submit>Register</button>
+</form>
+
+{% endblock %}

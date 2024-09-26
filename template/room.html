@@ -1,0 +1,498 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Room
+{% endblock %}
+
+{% block body %}
+
+    <div class = gameplay>
+        <b><p>Active Room: {{room}}</p></b>
+
+
+            <p id = count></p>
+
+            <br>
+
+            <audio controls autoplay>
+                <source src='{{preview}}'>
+            </audio>
+
+            <br>
+            <br>
+            <input id = 'guessbox' type="text" autofocus class = 'inputBox' placeholder = 'Type here your guess...' autocomplete="off"/>
+            <button id = 'submitter' class = submitBtn onClick="check_on_enter()"><b>Submit</b></button>
+            <p id = name><b>{{username}}</b></p>
+            <p>Score: <b id = score></b></p>
+            <p> Time: <b id = guess_time> </b></p>
+            <button id = 'reloader' onClick="reload_page()"><b>Reload</b></button>
+    </div>
+
+    <div class = scroll>
+        <div id = 'guessed_song' class = 'guessed_song'>
+            <div class = 'song_container'>
+                <img src = {{last_played.imageUrl}} class = 'imageurl'>
+                <div class = title_artist>
+                    <p><b>{{last_played.artist}} </b> - {{last_played.title}} </p>
+                {% if last_played.record != 0 %}
+                    <p id = 'Recordholder'><b>Recordholder: </b> {{last_played.player}} ({{last_played.record}}) </p>
+                {% else %}
+                    <p id = 'Recordholder'><b>Recordholder: </b></p>
+                {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+        {% for row in database %}
+
+            <div class = 'song_container'>
+                <img src = {{row.imageUrl}} class = 'imageurl'>
+                <div class = title_artist>
+                    <p><b>{{row.artist}} </b> - {{row.title}} </p>
+                {% if row.record != 0 %}
+                    <p><b>Recordholder: </b> {{row.player}} ({{row.record}}) </p>
+                {% else %}
+                    <p><b>Recordholder: </b></p>
+                {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+    <div class = container>
+        <div id = popup class = popup>
+            <p style=text-align:center><b>The game has finished this are your stats!</b></p>
+            <table id = 'popup_table'>
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Username</th>
+                    <th>Score</th>
+                    <th>Guesses</th>
+                    <th>Mean Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                      <td>#1</td>
+                      <td><p>{{username}}</p></td>
+                      <td><p><b id = final_score> </b></p></td>
+                      <td><p><b id = guesses> </b></p></td>
+                      <td><p><b id = total_time> </b></p></td>
+                    </tr>
+                </tbody>
+              </table>
+        </div>
+    </div>
+
+    <script>
+
+        const abbreviations = {
+          bfmv: 'bullet for my valentine',
+          brmc: 'black rebel motorcycle club',
+          ccr: 'creedence clearwater revival',
+          elo: 'electric light orchestra',
+          fgth: 'frankie goes to hollywood',
+          jsbx: 'jon spencer blues explosion',
+          mcr: 'my chemical romance',
+          nkotb: 'new kids on the block',
+          omd: 'orchestral manoeuvres in the dark',
+          pusa: 'presidents of the united states of america',
+          qotsa: 'queens of the stone age',
+          ratm: 'rage against the machine',
+          rhcp: 'red hot chili peppers',
+          soad: 'system of a down',
+          stp: 'stone temple pilots'
+        };
+
+        function extract_artists(title, artist){
+
+            // important to first set the title and artist to lowercase
+            title = title.toLowerCase()
+            artist = artist.toLowerCase()
+
+            // to not allow any inconvenience to happen replace all square brackets in the title with round ones
+            title = title.replace("[", "(")
+            title = title.replace("]", ")")
+
+            // make a set that will contain every possible artist to guess
+            const artists = new Set()
+
+            // first extract the featurings from the artists this is the part between brackets
+            // TODO: In case it is possible that an artist can have multiple brackets (which i think isnt possible) reflection is needed
+            if (title.includes("(") == true && title.includes(")") == true) {
+                var between_brackets_ = title.match(/\(([^)]+)\)/g)
+
+                for (i in between_brackets_) {
+
+                    between_brackets = between_brackets_[i].slice(1,-1)
+
+                    // if there is feat. in the first six positions it means that featurings exist
+                    if (between_brackets.slice(0,6) == 'feat. ') {
+                        between_brackets = between_brackets.slice(6)
+
+                        // replace the and (&, +) signs for commmas so we can perform split only on commas
+                        between_brackets = between_brackets.replaceAll(" & ", ", ")
+                        between_brackets = between_brackets.replaceAll(" + ", ", ")
+
+
+                        // perform the split so we now found all artists that feature
+                        between_brackets.split(", ").forEach(element => artists.add(element));
+                    }
+                }
+            }
+
+            // now we will perform the same operation with the artist part
+            artist = artist.replace(" & ", ", ")
+            artist = artist.replace(" + ", ", ")
+
+            // perform the split on the artists
+            artist.split(", ").forEach(element => artists.add(element));
+
+            // perform operations on each individual artist
+            for (var element of artists) {
+
+                if (Object.values(abbreviations).includes(element) == true) {
+                    artists.add(Object.keys(abbreviations).find(key => abbreviations[key] === element))
+                }
+
+                // the infront of an artist will not have to be guessed TODO: fix assignment
+                if (element.slice(0,4) == 'the '){
+                    element = element.slice(4,)
+                    artists.add(element)
+                }
+
+                if (element.includes(".")) {
+                    element = element.replaceAll(".","")
+                }
+
+                if (element.includes("-")) {
+                    element = element.replaceAll("-","")
+                }
+
+                artists.add(element)
+
+            }
+
+            return artists
+        }
+
+    function extract_titles(title){
+
+        // important to convert the entire title to lowercase
+        title = title.toLowerCase()
+
+        // make a set that will contain every possibility to guess the title. If some crazy person decides to type everything it counts
+        // could help with some titles like (Don't Fear) the Reaper
+        const titles = new Set()
+        titles.add(title)
+
+        // this section also makes the full title without typing any brackets guessable
+        title_no_brackets = title.replace(/\[|\]|\(|\)/g,'')
+        titles.add(title_no_brackets)
+
+        // TODO: handle exceptions like dash, dots comma's and signs and whatever not. Possibly html codes aswell
+
+
+        // extract all that is not between the brackets and add it to the set
+        shortest_title = title.replace( /\s*(?:\[[^\]]*\]|\([^)]*\))\s*/g, "" )
+        titles.add(shortest_title)
+
+        for (var element of titles) {
+            if (element.includes(".")) {
+                element = element.replaceAll(".","")
+            }
+
+            if (element.includes("-")) {
+                element = element.replaceAll("-","")
+            }
+
+            if (element.includes(",")) {
+                element = element.replaceAll(",","")
+            }
+
+            titles.add(element)
+
+            if (element.includes(" & ")) {
+                element = element.replaceAll(" & ", " and ")
+            }
+
+            if (element.includes(" + ")) {
+                element = element.replaceAll(" + ", " and ")
+            }
+
+            titles.add(element)
+        }
+
+        return titles
+    }
+
+    // Taken from AmitDiwan at ToturialsWorld
+    function levenshteinDistance(str1, str2) {
+        const track = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+
+        for (let i = 0; i <= str1.length; i += 1) {
+            track[0][i] = i;
+        }
+
+        for (let j = 0; j <= str2.length; j += 1) {
+            track[j][0] = j;
+        }
+
+        for (let j = 1; j <= str2.length; j += 1) {
+            for (let i = 1; i <= str1.length; i += 1) {
+                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                track[j][i] = Math.min(
+                    track[j][i - 1] + 1, // deletion
+                    track[j - 1][i] + 1, // insertion
+                    track[j - 1][i - 1] + indicator, // substitution
+                );
+            }
+        }
+
+    return track[str2.length][str1.length];
+    };
+
+    function answercheck(artists, titles, guess){
+
+        // make boolean for both title and artist if guessed false will change into true
+        var artistBool = Boolean(false);
+        var titleBool = Boolean(false);
+
+        // irrate over all possible variations of the artists
+        for (const artist of artists) {
+
+            // compute the length of the artist you are currently checking and calculate the treshold with a natural log
+            artist_length = artist.length
+            treshold = Math.round(Math.log(artist_length))
+            distance = levenshteinDistance(guess,artist)
+
+            // check if the lehvenstein distance is equal or smaller than the distance
+            if (distance <= treshold) {
+                artistBool = Boolean(true)
+            }
+        }
+
+        // irrate over all possible variations of the titles
+        for (const title of titles) {
+
+            // compute the length of the title you are currently checking and calculate the treshold with a natural log
+            title_length = title.length
+            treshold = Math.round(Math.log(title_length))
+            distance = levenshteinDistance(guess,title)
+
+            // check if the lehvenstein distance is equal or smaller than the distance
+            if (distance <= treshold) {
+                titleBool = Boolean(true)
+            }
+        }
+
+        //Todo: find a proper return way
+        return [titleBool, artistBool]
+    }
+
+    var decodeEntities = (function() {
+        // this prevents any overhead from creating the object each time
+        var element = document.createElement('div');
+
+        function decodeHTMLEntities (str) {
+
+            if(str && typeof str === 'string') {
+            // strip script/html tags
+            str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
+            str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
+            element.innerHTML = str;
+            str = element.textContent;
+            element.textContent = '';
+            }
+
+            return str;
+        }
+        return decodeHTMLEntities;''
+    })();
+
+    function reload_page(gt) {
+
+        var guessTime = gt
+
+        // make submitting more than once impossible
+        document.getElementById("reloader").onclick = null;
+
+
+        const DICT = {'score': roundscore, 'guessTime': guessTime}
+        const json = JSON.stringify(DICT);
+                    $.ajax({
+                        url:"/account",
+                        type:"POST",
+                        contentType: "application/json",
+                        data: JSON.stringify(json)});
+
+        guessed_song.classList.add("open-guessed_song")
+
+        if (guessed == true) {
+            guess_string = guessTime
+            if (guessTime < record || record == 0.0) {
+                if (username != 'guest') {
+                    document.getElementById("Recordholder").innerHTML = "Recordholder: ".bold() + username + " (" + guessTime + ")"
+                    guess_string += ' (New Record!)'
+                }
+            }
+            document.getElementById("guess_time").innerHTML = guess_string;
+        }
+
+        if (count == rounds) {
+            popup.classList.add("open-popup")
+
+            if (guessNumber != 0) {
+                var average = (tt / guessNumber).toFixed(2)
+            }
+            else var average = 0
+
+            document.getElementById("final_score").innerHTML = score;
+            document.getElementById("guesses").innerHTML = guessNumber;
+            document.getElementById("total_time").innerHTML = average;
+            setTimeout(() => { location.reload(); }, 5000);
+        }
+        else {
+            setTimeout(() => { location.reload(); }, 2000);
+        }
+    }
+
+    function check_on_enter() {
+
+        // get the variables from the userinput the titles and the artists
+        var guess = document.getElementById('guessbox').value.toLowerCase()
+        var artist = decodeEntities("{{artist}}")
+        var title = decodeEntities("{{title}}")
+
+        // extract artists and titles using the function
+        var artists = extract_artists(title, artist)
+        var titles = extract_titles(title)
+
+
+        // put those through the answercheck and replace the set bools on page loading
+        bools = answercheck(artists, titles, guess)
+        var endTime = performance.now()
+        var guessTime = ((endTime - startTime) / 1000).toFixed(2)
+
+        if (guessTime <= 30 && guessed == false) {
+            if (guessed_title == false && bools[0] == true) {
+                guessed_title = true
+                if (guessed_artist == true) {
+                    roundscore += 5
+                    score+=5
+                }
+                else {
+                    roundscore += 1
+                    score+=1
+                    document.getElementById("name").style.color = "#e0a604";
+                }
+            }
+
+            if (guessed_artist == false && bools[1] == true) {
+                guessed_artist = true
+                if (guessed_title == true) {
+                    roundscore += 5
+                    score+=5
+                }
+
+                else {
+                    roundscore += 1
+                    score+=1
+                    document.getElementById("name").style.color = "#5f48d4";
+                }
+            }
+
+            if (guessed_artist == true && guessed_title == true) {
+
+                    const STRING = {'guessTime': guessTime, 'id': ID, 'room': room, 'username': username }
+                    const GT = JSON.stringify(STRING);
+                        $.ajax({
+                            url:"/data",
+                            type:"POST",
+                            contentType: "application/json",
+                            data: JSON.stringify(GT)});
+
+                    document.getElementById("name").style.color = "#58c777";
+
+                    tt = tt + parseFloat(guessTime)
+                    guessNumber++
+
+                    localStorage.setItem("total_time", tt);
+                    localStorage.setItem("guessNumber", guessNumber);
+
+                    guessed = true
+
+                    reload_page(guessTime)
+                }
+
+
+            document.getElementById("score").innerHTML = score;
+            localStorage.setItem("score", score);
+        }
+    }
+
+    </script>
+
+    <script>
+    var input = document.getElementById("guessbox");
+    input.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        if (document.getElementById("guessbox").value != "") {
+            event.preventDefault();
+            document.getElementById("submitter").click();
+            document.getElementById('guessbox').value = "";
+        }
+    }
+    });
+    </script>
+
+    <script>
+
+        let popup = document.getElementById('popup')
+        let guessed_song = document.getElementById('guessed_song')
+        let ID = "{{ID}}"
+        let room = "{{room}}"
+        let username = "{{username}}"
+        let record = "{{last_played.record}}"
+
+        var guessTime = 0
+
+        // this is the on load part of the code
+        count = '{{count}}'
+        rounds = '{{rounds}}'
+
+        var tt = localStorage.getItem('total_time');
+        tt = parseFloat(tt)
+
+        var guessNumber = localStorage.getItem('guessNumber');
+        guessNumber = parseInt(guessNumber)
+
+        var score = localStorage.getItem('score');
+        score = parseInt(score)
+
+        if (count == 1) {
+            var score = 0
+            var tt = 0
+            var guessNumber = 0
+            localStorage.setItem("score", score);
+            localStorage.setItem("tt", tt);
+            localStorage.setItem("guessNumber", guessNumber);
+        }
+
+        var roundscore = 0
+
+        var guessed_title = false
+        var guessed_artist = false
+        var guessed = false
+
+        var startTime = performance.now()
+
+        document.getElementById("score").innerHTML = score;
+        document.getElementById("count").innerHTML = "Round: " + count + "/" + rounds;
+
+    </script>
+
+{% endblock %}

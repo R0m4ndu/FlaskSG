@@ -1,0 +1,29 @@
+Possible TODO's:
+
+1: Exceptions in title there will be many I assume (MORE EXIST THAT WILL NEED A LOOK IN THE FUTURE)
+    - dots, dashes, and signs, commas, html codes the
+    - these exceptions will also be in the artists we will probably have to irate over them and remove dots / dashes etc.
+
+2: Check if itune artists can have brackets can have (souer souire - dominique has it but idk if it matters)
+
+3: Make song player that can work with only ids, ideally that works with links from multiple countries (nl & us at the very least)
+
+4: make a database in which the previews can be ajusted (could even be an API (we'll see))
+
+5: Without making the game look nice make it somewhat possible to simulate an actual game to help with debugging
+
+6: For this the pre made functions will have to be connected
+
+7: ofcourse the entire game needs to be designed but i dont see this as a priority (ended up being prioritized :clown:
+
+8: Can I put the js scripts in separate files and how?
+
+10: Eventually might even make a chatroom?
+
+11: Locate & fix error in aftergame mean time.
+
+12: ABBREVIATIONS
+
+13: Cleanup of code + add commentss
+
+14: findout why mean time updates one step later in profile

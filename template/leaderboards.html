@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Leaderboards
+{% endblock %}
+
+{% block body %}
+  <br>
+  <div class = table_container>
+    <table id="stats_table">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Username</th>
+        <th style = width:17.5% id = score><a href = "{{ url_for('leaderboards', stat='Scores') }}" class='nolink'>Score</a></th>
+        <th style = width:17.5% id = mgt><a href = "{{ url_for('leaderboards', stat='MGT') }}" class='nolink'>Mean Time</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in Database %}
+        <tr>
+          <td>{{ loop.index0 + 1 }}</td>
+          {% if username == row.username %}
+          <td><a href= "{{url_for('profile', user = row.username)}}" class = 'Users'><b>{{ row.username }}</b></a></td>
+          {% else %}
+          <td><a href= "{{url_for('profile', user = row.username)}}" class = 'Users'>{{ row.username }} </a></td>
+          {% endif %}
+          <td>{{ row.Score }} </td>
+          <td>{{ row.MGT }} </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <script>
+    var stat = '{{stat}}'
+    if (stat == "MGT") {
+      document.getElementById("mgt").style.backgroundColor = "#0066ff";
+    }
+
+    else {
+      document.getElementById("score").style.backgroundColor = "#0066ff";
+    }
+
+  </script>
+
+{% endblock %}
