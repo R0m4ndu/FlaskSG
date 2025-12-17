@@ -1,0 +1,3 @@
+Database structure should be improved. There should be 1 main database named songs that stores all the songs. The room databases should just be the list of id's. 
+tho it could be a challenge to make the edit page for example for 1 page but it should all be doable. 
+PR table should just store the song_ID and the record time. 

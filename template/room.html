@@ -6,493 +6,480 @@
 
 {% block body %}
 
-    <div class = gameplay>
-        <b><p>Active Room: {{room}}</p></b>
-
-
-            <p id = count></p>
-
-            <br>
-
-            <audio controls autoplay>
-                <source src='{{preview}}'>
-            </audio>
-
-            <br>
-            <br>
-            <input id = 'guessbox' type="text" autofocus class = 'inputBox' placeholder = 'Type here your guess...' autocomplete="off"/>
-            <button id = 'submitter' class = submitBtn onClick="check_on_enter()"><b>Submit</b></button>
-            <p id = name><b>{{username}}</b></p>
-            <p>Score: <b id = score></b></p>
-            <p> Time: <b id = guess_time> </b></p>
-            <button id = 'reloader' onClick="reload_page()"><b>Reload</b></button>
+    <div class="top-info">
+        <span><b>Active Room: {{room}}</b> ({{song_count}} tracks)</span>
+        <span id="count" style="margin-left: 30px;">Waiting for round...</span>
     </div>
 
-    <div class = scroll>
-        <div id = 'guessed_song' class = 'guessed_song'>
-            <div class = 'song_container'>
-                <img src = {{last_played.imageUrl}} class = 'imageurl'>
-                <div class = title_artist>
-                    <p><b>{{last_played.artist}} </b> - {{last_played.title}} </p>
-                {% if last_played.record != 0 %}
-                    <p id = 'Recordholder'><b>Recordholder: </b> {{last_played.player}} ({{last_played.record}}) </p>
-                {% else %}
-                    <p id = 'Recordholder'><b>Recordholder: </b></p>
-                {% endif %}
-
-                </div>
+    <div class="gameplay">
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 50px; margin-bottom: 15px;">
+            <div id="timer-bar-container">
+                <div id="timer-bar"></div>
             </div>
+            <span id="timer" style="font-size: 18px; font-weight: bold; color: #58c777; min-width: 30px;">{{song_duration}}</span>
         </div>
 
-        {% for row in database %}
+        <audio id="audio-player" controls autoplay>
+            <source src="" id="audio-source">
+        </audio>
 
-            <div class = 'song_container'>
-                <img src = {{row.imageUrl}} class = 'imageurl'>
-                <div class = title_artist>
-                    <p><b>{{row.artist}} </b> - {{row.title}} </p>
-                {% if row.record != 0 %}
-                    <p><b>Recordholder: </b> {{row.player}} ({{row.record}}) </p>
-                {% else %}
-                    <p><b>Recordholder: </b></p>
-                {% endif %}
-                </div>
-            </div>
-        {% endfor %}
-
-    </div>
-
-    <div class = container>
-        <div id = popup class = popup>
-            <p style=text-align:center><b>The game has finished this are your stats!</b></p>
-            <table id = 'popup_table'>
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Username</th>
-                    <th>Score</th>
-                    <th>Guesses</th>
-                    <th>Mean Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                      <td>#1</td>
-                      <td><p>{{username}}</p></td>
-                      <td><p><b id = final_score> </b></p></td>
-                      <td><p><b id = guesses> </b></p></td>
-                      <td><p><b id = total_time> </b></p></td>
-                    </tr>
-                </tbody>
-              </table>
+        <br>
+        <input id="guessbox" type="text" autofocus class="inputBox" placeholder="Type here your guess..." autocomplete="off" tabindex="1" onpaste="return false;">
+        <button id="submitter" class="submitBtn" onClick="submitGuess()"><b>Submit</b></button>
+            
+        <div id="leaderboard-container">
+            <h3 class="leaderboard-header">Leaderboard</h3>
+            <ul id="leaderboard-list"></ul>
         </div>
     </div>
 
+    <div class="scroll">
+        <div id="played-songs-list">
+            <!-- Recently played songs will be added here -->
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div id="Chat" class="Chat">
+            <div id="messages"></div>
+            <br>
+            <textarea id="message-input" placeholder="chat here..." tabindex="3"></textarea>
+        </div>
+        <div id="answer"></div>
+    </div>
+
+    <!-- Chat functionality (keep existing) -->
     <script>
+        const socket = io();
 
-        const abbreviations = {
-          bfmv: 'bullet for my valentine',
-          brmc: 'black rebel motorcycle club',
-          ccr: 'creedence clearwater revival',
-          elo: 'electric light orchestra',
-          fgth: 'frankie goes to hollywood',
-          jsbx: 'jon spencer blues explosion',
-          mcr: 'my chemical romance',
-          nkotb: 'new kids on the block',
-          omd: 'orchestral manoeuvres in the dark',
-          pusa: 'presidents of the united states of america',
-          qotsa: 'queens of the stone age',
-          ratm: 'rage against the machine',
-          rhcp: 'red hot chili peppers',
-          soad: 'system of a down',
-          stp: 'stone temple pilots'
-        };
+        // Preloaded messages from Flask
+        const messages = {{ messages | tojson }};
 
-        function extract_artists(title, artist){
-
-            // important to first set the title and artist to lowercase
-            title = title.toLowerCase()
-            artist = artist.toLowerCase()
-
-            // to not allow any inconvenience to happen replace all square brackets in the title with round ones
-            title = title.replace("[", "(")
-            title = title.replace("]", ")")
-
-            // make a set that will contain every possible artist to guess
-            const artists = new Set()
-
-            // first extract the featurings from the artists this is the part between brackets
-            // TODO: In case it is possible that an artist can have multiple brackets (which i think isnt possible) reflection is needed
-            if (title.includes("(") == true && title.includes(")") == true) {
-                var between_brackets_ = title.match(/\(([^)]+)\)/g)
-
-                for (i in between_brackets_) {
-
-                    between_brackets = between_brackets_[i].slice(1,-1)
-
-                    // if there is feat. in the first six positions it means that featurings exist
-                    if (between_brackets.slice(0,6) == 'feat. ') {
-                        between_brackets = between_brackets.slice(6)
-
-                        // replace the and (&, +) signs for commmas so we can perform split only on commas
-                        between_brackets = between_brackets.replaceAll(" & ", ", ")
-                        between_brackets = between_brackets.replaceAll(" + ", ", ")
-
-
-                        // perform the split so we now found all artists that feature
-                        between_brackets.split(", ").forEach(element => artists.add(element));
-                    }
+        // Function to render messages
+        function renderMessages() {
+            const messagesDiv = document.getElementById('messages');
+            messages.forEach(msg => {
+                const messageElem = document.createElement('p');
+                if (msg.username === 'System') {
+                    messageElem.innerHTML = `<strong style="color: #4CAF50;">${msg.username}:</strong> <span style="color: #4CAF50;">${msg.message}</span>`;
+                } else {
+                    messageElem.innerHTML = `<strong>${msg.username}:</strong> ${msg.message}`;
                 }
-            }
+                messagesDiv.appendChild(messageElem);
+            });
+            scrollToBottom();
+        }
 
-            // now we will perform the same operation with the artist part
-            artist = artist.replace(" & ", ", ")
-            artist = artist.replace(" + ", ", ")
+        // Function to scroll to the bottom of the messages container
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
 
-            // perform the split on the artists
-            artist.split(", ").forEach(element => artists.add(element));
+        // Call function to render messages on page load
+        renderMessages();
 
-            // perform operations on each individual artist
-            for (var element of artists) {
-
-                if (Object.values(abbreviations).includes(element) == true) {
-                    artists.add(Object.keys(abbreviations).find(key => abbreviations[key] === element))
+        // Listen for incoming messages
+        socket.on('message', function(msg) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElem = document.createElement('p');
+            const parts = msg.split(': ');
+            if (parts.length === 2) {
+                const username = parts[0];
+                const message = parts[1];
+                if (username === 'System') {
+                    messageElem.innerHTML = `<strong style="color: #4CAF50;">${username}:</strong> <span style="color: #4CAF50;">${message}</span>`;
+                } else {
+                    messageElem.innerHTML = `<strong>${username}:</strong> ${message}`;
                 }
-
-                // the infront of an artist will not have to be guessed TODO: fix assignment
-                if (element.slice(0,4) == 'the '){
-                    element = element.slice(4,)
-                    artists.add(element)
-                }
-
-                if (element.includes(".")) {
-                    element = element.replaceAll(".","")
-                }
-
-                if (element.includes("-")) {
-                    element = element.replaceAll("-","")
-                }
-
-                artists.add(element)
-
+            } else {
+                messageElem.textContent = msg;
             }
+            messagesDiv.appendChild(messageElem);
+            scrollToBottom();
+        });
 
-            return artists
-        }
+        // Send message when 'Enter' key is pressed
+        document.getElementById('message-input').addEventListener('keydown', function(event) {
+            const username = "{{username}}";
+            const message = document.getElementById('message-input').value.trim();
+            const room = "{{room}}";
 
-    function extract_titles(title){
-
-        // important to convert the entire title to lowercase
-        title = title.toLowerCase()
-
-        // make a set that will contain every possibility to guess the title. If some crazy person decides to type everything it counts
-        // could help with some titles like (Don't Fear) the Reaper
-        const titles = new Set()
-        titles.add(title)
-
-        // this section also makes the full title without typing any brackets guessable
-        title_no_brackets = title.replace(/\[|\]|\(|\)/g,'')
-        titles.add(title_no_brackets)
-
-        // TODO: handle exceptions like dash, dots comma's and signs and whatever not. Possibly html codes aswell
-
-
-        // extract all that is not between the brackets and add it to the set
-        shortest_title = title.replace( /\s*(?:\[[^\]]*\]|\([^)]*\))\s*/g, "" )
-        titles.add(shortest_title)
-
-        for (var element of titles) {
-            if (element.includes(".")) {
-                element = element.replaceAll(".","")
+            if (event.key === 'Enter' && message) {
+                event.preventDefault();
+                const formattedMessage = `${username}: ${message}_${room}`;
+                socket.send(formattedMessage);
+                document.getElementById('message-input').value = '';
+                scrollToBottom();
             }
-
-            if (element.includes("-")) {
-                element = element.replaceAll("-","")
-            }
-
-            if (element.includes(",")) {
-                element = element.replaceAll(",","")
-            }
-
-            titles.add(element)
-
-            if (element.includes(" & ")) {
-                element = element.replaceAll(" & ", " and ")
-            }
-
-            if (element.includes(" + ")) {
-                element = element.replaceAll(" + ", " and ")
-            }
-
-            titles.add(element)
-        }
-
-        return titles
-    }
-
-    // Taken from AmitDiwan at ToturialsWorld
-    function levenshteinDistance(str1, str2) {
-        const track = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
-
-        for (let i = 0; i <= str1.length; i += 1) {
-            track[0][i] = i;
-        }
-
-        for (let j = 0; j <= str2.length; j += 1) {
-            track[j][0] = j;
-        }
-
-        for (let j = 1; j <= str2.length; j += 1) {
-            for (let i = 1; i <= str1.length; i += 1) {
-                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-                track[j][i] = Math.min(
-                    track[j][i - 1] + 1, // deletion
-                    track[j - 1][i] + 1, // insertion
-                    track[j - 1][i - 1] + indicator, // substitution
-                );
-            }
-        }
-
-    return track[str2.length][str1.length];
-    };
-
-    function answercheck(artists, titles, guess){
-
-        // make boolean for both title and artist if guessed false will change into true
-        var artistBool = Boolean(false);
-        var titleBool = Boolean(false);
-
-        // irrate over all possible variations of the artists
-        for (const artist of artists) {
-
-            // compute the length of the artist you are currently checking and calculate the treshold with a natural log
-            artist_length = artist.length
-            treshold = Math.round(Math.log(artist_length))
-            distance = levenshteinDistance(guess,artist)
-
-            // check if the lehvenstein distance is equal or smaller than the distance
-            if (distance <= treshold) {
-                artistBool = Boolean(true)
-            }
-        }
-
-        // irrate over all possible variations of the titles
-        for (const title of titles) {
-
-            // compute the length of the title you are currently checking and calculate the treshold with a natural log
-            title_length = title.length
-            treshold = Math.round(Math.log(title_length))
-            distance = levenshteinDistance(guess,title)
-
-            // check if the lehvenstein distance is equal or smaller than the distance
-            if (distance <= treshold) {
-                titleBool = Boolean(true)
-            }
-        }
-
-        //Todo: find a proper return way
-        return [titleBool, artistBool]
-    }
-
-    var decodeEntities = (function() {
-        // this prevents any overhead from creating the object each time
-        var element = document.createElement('div');
-
-        function decodeHTMLEntities (str) {
-
-            if(str && typeof str === 'string') {
-            // strip script/html tags
-            str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
-            str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
-            element.innerHTML = str;
-            str = element.textContent;
-            element.textContent = '';
-            }
-
-            return str;
-        }
-        return decodeHTMLEntities;''
-    })();
-
-    function reload_page(gt) {
-
-        var guessTime = gt
-
-        // make submitting more than once impossible
-        document.getElementById("reloader").onclick = null;
-
-
-        const DICT = {'score': roundscore, 'guessTime': guessTime}
-        const json = JSON.stringify(DICT);
-                    $.ajax({
-                        url:"/account",
-                        type:"POST",
-                        contentType: "application/json",
-                        data: JSON.stringify(json)});
-
-        guessed_song.classList.add("open-guessed_song")
-
-        if (guessed == true) {
-            guess_string = guessTime
-            if (guessTime < record || record == 0.0) {
-                if (username != 'guest') {
-                    document.getElementById("Recordholder").innerHTML = "Recordholder: ".bold() + username + " (" + guessTime + ")"
-                    guess_string += ' (New Record!)'
-                }
-            }
-            document.getElementById("guess_time").innerHTML = guess_string;
-        }
-
-        if (count == rounds) {
-            popup.classList.add("open-popup")
-
-            if (guessNumber != 0) {
-                var average = (tt / guessNumber).toFixed(2)
-            }
-            else var average = 0
-
-            document.getElementById("final_score").innerHTML = score;
-            document.getElementById("guesses").innerHTML = guessNumber;
-            document.getElementById("total_time").innerHTML = average;
-            setTimeout(() => { location.reload(); }, 5000);
-        }
-        else {
-            setTimeout(() => { location.reload(); }, 2000);
-        }
-    }
-
-    function check_on_enter() {
-
-        // get the variables from the userinput the titles and the artists
-        var guess = document.getElementById('guessbox').value.toLowerCase()
-        var artist = decodeEntities("{{artist}}")
-        var title = decodeEntities("{{title}}")
-
-        // extract artists and titles using the function
-        var artists = extract_artists(title, artist)
-        var titles = extract_titles(title)
-
-
-        // put those through the answercheck and replace the set bools on page loading
-        bools = answercheck(artists, titles, guess)
-        var endTime = performance.now()
-        var guessTime = ((endTime - startTime) / 1000).toFixed(2)
-
-        if (guessTime <= 30 && guessed == false) {
-            if (guessed_title == false && bools[0] == true) {
-                guessed_title = true
-                if (guessed_artist == true) {
-                    roundscore += 5
-                    score+=5
-                }
-                else {
-                    roundscore += 1
-                    score+=1
-                    document.getElementById("name").style.color = "#e0a604";
-                }
-            }
-
-            if (guessed_artist == false && bools[1] == true) {
-                guessed_artist = true
-                if (guessed_title == true) {
-                    roundscore += 5
-                    score+=5
-                }
-
-                else {
-                    roundscore += 1
-                    score+=1
-                    document.getElementById("name").style.color = "#5f48d4";
-                }
-            }
-
-            if (guessed_artist == true && guessed_title == true) {
-
-                    const STRING = {'guessTime': guessTime, 'id': ID, 'room': room, 'username': username }
-                    const GT = JSON.stringify(STRING);
-                        $.ajax({
-                            url:"/data",
-                            type:"POST",
-                            contentType: "application/json",
-                            data: JSON.stringify(GT)});
-
-                    document.getElementById("name").style.color = "#58c777";
-
-                    tt = tt + parseFloat(guessTime)
-                    guessNumber++
-
-                    localStorage.setItem("total_time", tt);
-                    localStorage.setItem("guessNumber", guessNumber);
-
-                    guessed = true
-
-                    reload_page(guessTime)
-                }
-
-
-            document.getElementById("score").innerHTML = score;
-            localStorage.setItem("score", score);
-        }
-    }
-
+        });
     </script>
 
+    <!-- Multiplayer Game Logic -->
     <script>
-    var input = document.getElementById("guessbox");
-    input.addEventListener("keypress", function(event) {
-    if (event.key === "Enter") {
-        if (document.getElementById("guessbox").value != "") {
-            event.preventDefault();
-            document.getElementById("submitter").click();
-            document.getElementById('guessbox').value = "";
+        const room = "{{room}}";
+        const username = "{{username}}";
+        let currentRound = 0;
+        let myScore = 0;
+        let roundActive = false;
+        let timerInterval = null;
+        let roundPoints = 0; // Track cumulative points for current round
+        let playerStates = {}; // Track each player's current state in the round
+
+        // Join game on page load
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            // Join the game room (handles both game and chat)
+            socket.emit('join_game', {room_name: room});
+        });
+
+        // Game configuration (from server)
+        const ROUNDS_PER_GAME = {{rounds_per_game}};
+        const SONG_DURATION = {{song_duration}};
+
+        // Initial game state
+        socket.on('game_state', (data) => {
+            console.log('Received game state:', data);
+            currentRound = data.round;
+            updateLeaderboard(data.leaderboard);
+            document.getElementById('count').textContent = `Round: ${data.round}/${ROUNDS_PER_GAME}`;
+            if (data.played_songs) {
+                updatePlayedSongs(data.played_songs);
+            }
+        });
+
+        // Round start
+        socket.on('round_start', (data) => {
+            console.log('Round starting:', data);
+            currentRound = data.round;
+            roundActive = true;
+
+            // Close any existing cycle complete popup
+            const existingPopup = document.querySelector('.cycle-popup-overlay');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+
+            // Update UI
+            document.getElementById('count').textContent = `Round: ${data.round}/${ROUNDS_PER_GAME}`;
+
+            // Reset round points and player states for new round
+            roundPoints = 0;
+            playerStates = {};
+
+            // Update audio
+            const audio = document.getElementById('audio-player');
+            const source = document.getElementById('audio-source');
+            source.src = data.preview_url;
+            audio.load();
+            audio.play().catch(e => console.log('Audio play failed:', e));
+
+            // Hide answer from previous round
+            document.getElementById('answer').style.display = 'none';
+
+            // Enable input
+            const guessbox = document.getElementById('guessbox');
+            guessbox.disabled = false;
+            guessbox.value = '';
+            guessbox.focus();
+
+            // Update leaderboard
+            updateLeaderboard(data.leaderboard);
+
+            // Update played songs (will be empty on round 1)
+            if (data.played_songs !== undefined) {
+                updatePlayedSongs(data.played_songs);
+            }
+
+            // Start timer
+            startTimer(SONG_DURATION);
+        });
+
+        // Player scored
+        socket.on('player_scored', (data) => {
+            console.log('Player scored:', data);
+
+            // Track player state
+            if (!playerStates[data.username]) {
+                playerStates[data.username] = {
+                    roundPoints: 0
+                };
+            }
+
+            // Add points to player's round total
+            playerStates[data.username].roundPoints = (playerStates[data.username].roundPoints || 0) + data.score;
+
+            if (data.partial) {
+                // Store partial guess info
+                if (data.guessed_artist) {
+                    playerStates[data.username].guessed_artist = true;
+                }
+                if (data.guessed_title) {
+                    playerStates[data.username].guessed_title = true;
+                }
+            } else {
+                // Complete guess
+                playerStates[data.username].guessed_artist = true;
+                playerStates[data.username].guessed_title = true;
+                playerStates[data.username].time = data.time;
+                playerStates[data.username].is_new_record = data.new_record;
+
+                // Show NEW RECORD popup to all users
+                if (data.new_record) {
+                    const message = data.username === username
+                        ? 'NEW RECORD!'
+                        : `${data.username} got a NEW RECORD!`;
+                    showNotification(message, 'success', 5000);
+                }
+            }
+
+            // Update cumulative points for current user
+            if (data.username === username) {
+                myScore = data.total;
+                roundPoints += data.score;
+            }
+
+            // Update leaderboard
+            if (data.leaderboard) {
+                updateLeaderboard(data.leaderboard);
+            }
+        });
+
+        // Leaderboard update (when someone joins/leaves)
+        socket.on('leaderboard_update', (data) => {
+            updateLeaderboard(data.leaderboard);
+        });
+
+        // Round end
+        socket.on('round_end', (data) => {
+            console.log('Round ended:', data);
+            roundActive = false;
+            stopTimer();
+
+            // Show answer
+            const answerEl = document.getElementById('answer');
+            answerEl.innerHTML = `<b>${data.artist}</b> - ${data.title}`;
+            answerEl.style.display = 'block';
+
+            // Update leaderboard
+            updateLeaderboard(data.leaderboard);
+
+            // Update played songs list
+            if (data.played_songs) {
+                updatePlayedSongs(data.played_songs);
+            }
+
+            // Show cycle complete popup if this was round 10
+            if (data.cycle_complete && data.top_3) {
+                showCycleCompletePopup(data.top_3);
+            }
+
+            // Next round starts automatically from server after 5s
+        });
+
+        // Submit guess
+        function submitGuess() {
+            const guess = document.getElementById('guessbox').value.trim().toLowerCase();
+
+            // Clear input for next guess (always clear, even after timer expires)
+            document.getElementById('guessbox').value = '';
+
+            // Only submit if round is active and guess is not empty
+            if (!roundActive || !guess) return;
+
+            socket.emit('submit_guess', {
+                room_name: room,
+                guess: guess
+            });
         }
-    }
-    });
-    </script>
 
-    <script>
+        // Timer functions
+        function startTimer(seconds) {
+            let remaining = seconds;
+            const timerEl = document.getElementById('timer');
+            const timerBar = document.getElementById('timer-bar');
 
-        let popup = document.getElementById('popup')
-        let guessed_song = document.getElementById('guessed_song')
-        let ID = "{{ID}}"
-        let room = "{{room}}"
-        let username = "{{username}}"
-        let record = "{{last_played.record}}"
+            timerEl.textContent = remaining;
+            timerBar.style.width = '100%';
+            timerBar.className = '';
 
-        var guessTime = 0
+            timerInterval = setInterval(() => {
+                remaining -= 0.1;
 
-        // this is the on load part of the code
-        count = '{{count}}'
-        rounds = '{{rounds}}'
+                if (remaining <= 0) {
+                    stopTimer();
+                    timerEl.textContent = '0';
+                    timerBar.style.width = '0%';
+                    return;
+                }
 
-        var tt = localStorage.getItem('total_time');
-        tt = parseFloat(tt)
+                timerEl.textContent = Math.ceil(remaining);
+                timerBar.style.width = `${(remaining / seconds) * 100}%`;
 
-        var guessNumber = localStorage.getItem('guessNumber');
-        guessNumber = parseInt(guessNumber)
-
-        var score = localStorage.getItem('score');
-        score = parseInt(score)
-
-        if (count == 1) {
-            var score = 0
-            var tt = 0
-            var guessNumber = 0
-            localStorage.setItem("score", score);
-            localStorage.setItem("tt", tt);
-            localStorage.setItem("guessNumber", guessNumber);
+                // Change color in last 3 seconds
+                if (remaining < 3) {
+                    timerBar.classList.add('warning');
+                } else {
+                    timerBar.classList.remove('warning');
+                }
+            }, 100);
         }
 
-        var roundscore = 0
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
 
-        var guessed_title = false
-        var guessed_artist = false
-        var guessed = false
+        // Leaderboard
+        function updateLeaderboard(players) {
+            if (!players) return;
 
-        var startTime = performance.now()
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
 
-        document.getElementById("score").innerHTML = score;
-        document.getElementById("count").innerHTML = "Round: " + count + "/" + rounds;
+            players.forEach((player, index) => {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-entry';
 
+                // Add medal class for top 3
+                if (index === 0) {
+                    li.classList.add('first-place');
+                } else if (index === 1) {
+                    li.classList.add('second-place');
+                } else if (index === 2) {
+                    li.classList.add('third-place');
+                }
+
+                const playerName = player.username;
+                const state = playerStates[playerName] || {};
+
+                // Determine name color based on guess state
+                let nameColor = '';
+                if (state.guessed_artist && state.guessed_title) {
+                    nameColor = '#2E7D32'; // Darker green for both
+                } else if (state.guessed_artist || state.guessed_title) {
+                    nameColor = '#4169E1'; // Blue for either artist or title
+                }
+
+                const nameStyle = nameColor ? `style="color: ${nameColor};"` : '';
+
+                // Add guess time if available
+                const timeDisplay = player.guess_time !== null ? ` (${player.guess_time}s)` : '';
+
+                // Add round points indicator if any
+                let pointsDisplay = '';
+                if (state.roundPoints && state.roundPoints > 0) {
+                    pointsDisplay = ` <span style="color: #2E7D32; font-weight: bold;">(+${state.roundPoints})</span>`;
+                }
+
+                li.innerHTML = `
+                    <span class="rank">#${index + 1}</span>
+                    <span class="username" ${nameStyle}>${player.username}${pointsDisplay}${timeDisplay}</span>
+                    <span class="score">${player.score}</span>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // Update played songs list
+        function updatePlayedSongs(songs) {
+            if (!songs) return;
+
+            const list = document.getElementById('played-songs-list');
+            list.innerHTML = '';
+
+            songs.forEach((song) => {
+                const div = document.createElement('div');
+                div.className = 'song_container';
+
+                let recordText = '';
+                if (song.record && song.record !== 0) {
+                    recordText = `<p><b>Recordholder: </b>${song.player} (${song.record})</p>`;
+                } else {
+                    recordText = '<p><b>Recordholder: </b></p>';
+                }
+
+                div.innerHTML = `
+                    <img src="${song.artwork}" class="imageurl">
+                    <div class="title_artist">
+                        <p><b>${song.artist}</b> - ${song.title}</p>
+                        ${recordText}
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // Notifications
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // Cycle complete popup
+        function showCycleCompletePopup(top3) {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'cycle-popup-overlay';
+
+            // Create popup
+            const popup = document.createElement('div');
+            popup.className = 'cycle-popup';
+
+            let popupHTML = '<h2>Cycle Complete!</h2><h3>Top 3 Players</h3><div class="top3-list">';
+
+            top3.forEach((player, index) => {
+                const medal = ['🥇', '🥈', '🥉'][index];
+                popupHTML += `
+                    <div class="top3-entry">
+                        <span class="medal">${medal}</span>
+                        <span class="player-name">${player.username}</span>
+                        <span class="player-stats">
+                            Score: ${player.total_score} | Avg Time: ${player.average_time}s
+                        </span>
+                    </div>
+                `;
+            });
+
+            popupHTML += '</div><button class="close-popup" onclick="this.parentElement.parentElement.remove()">Close</button>';
+            popup.innerHTML = popupHTML;
+
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+
+            // Auto-close after 10 seconds
+            setTimeout(() => {
+                if (overlay.parentElement) {
+                    overlay.remove();
+                }
+            }, 10000);
+        }
+
+        // Enter key to submit
+        document.getElementById('guessbox').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim() !== '') {
+                e.preventDefault();
+                submitGuess();
+            }
+        });
+
+        // Leave game on page unload
+        window.addEventListener('beforeunload', () => {
+            socket.emit('leave_game', {room_name: room});
+        });
     </script>
 
 {% endblock %}

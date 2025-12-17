@@ -1,40 +1,43 @@
-import csv
-import json
-import random
-import requests
+from cs50 import SQL
 
-def song(csvFile):
-    with open(csvFile,'r') as csvFile:
-        reader = csv.reader(csvFile)
-        songlist = list(reader)
-        song = random.choice(songlist)
+from collections import Counter
 
-    ID = song[0]
+db = SQL("sqlite:///playing_songs.db")
 
-    url = f"https://itunes.apple.com/us/lookup?id={ID}"
-    response = requests.get(url)
-    response.raise_for_status()
-    res = response.json()['results']
-    if res == []:
-        url = f"https://itunes.apple.com/nl/lookup?id={ID}"
-        response = requests.get(url)
-        response.raise_for_status()
-        res = response.json()['results']
+db.execute("UPDATE Billion SET record = 0")
 
-    Data = res[0]
-    TrackData = []
-    TrackData.append(Data['artistName'])
-    TrackData.append(Data['trackName'])
+db.execute("DELETE FROM personal_records WHERE room = 'Billion'")
 
-    if len(song) == 2:
-        TrackData.append(song[1])
-    else:
-        TrackData.append(Data['previewUrl'])
 
-    TrackData.append(Data['artworkUrl60'])
-    TrackData.append(ID)
 
-    return TrackData
+# with open("songs.txt", "w", encoding="utf-8") as f:
+#     for i in all_songs:
+#         f.write(f"{i['artist']} - {i['title']}, {i['ID']}\n")
 
-for i in range(2):
-    print(i)
+# db.execute("DELETE FROM messages WHERE id IN (SELECT id FROM messages ORDER BY id DESC LIMIT 2);")
+        
+# db.execute("DELETE FROM DutchSongs WHERE artist = 'Mr Belt & Wezol'")
+
+
+
+# db.execute("DROP TABLE IF EXISTS personal_records")
+# db.execute("""
+#     CREATE TABLE personal_records (
+#         id INTEGER PRIMARY KEY AUTOINCREMENT,
+#         artist TEXT,
+#         title TEXT,
+#         record REAL,
+#         player TEXT,
+#         room TEXT
+#     )
+# """)
+
+# for i in ['Billion', 'DutchSongs', 'Short']:
+
+#     data = db.execute(f'SELECT * FROM {i}')
+
+#     for song in data:
+#         db.execute("""
+#             INSERT INTO personal_records (artist, title, record, player, room)
+#             VALUES (?, ?, ?, ?, ?)
+#         """, song['artist'], song['title'], song['record'], song['player'], song['room'])

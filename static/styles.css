@@ -21,39 +21,6 @@ body {
     font-family: 'Roboto', sans-serif;
 }
 
-.container {
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.popup {
-    width: 440px;
-    background: white;
-    border-radius: 10px;
-    border: #fff 1px solid;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-    visibility: hidden;
-}
-
-.open-popup {
-    visibility: visible;
-}
-
-#popup_table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-#popup_table td, #popup_table th {
-  border: 1px solid #ddd;
-  padding: 4px;
-}
 
 
 .guessed_song {
@@ -176,6 +143,13 @@ body {
   border-radius: 10px;
 }
 
+.top-info {
+  text-align: center;
+  margin-bottom: 55px;
+  margin-top: 30px;
+  font-size: 14px;
+}
+
 .gameplay {
   margin-left: 95px;
 }
@@ -256,10 +230,12 @@ body {
 .scroll {
   color: black;
   width: 420px;
-  height: 300px;
+  height: calc(100vh - 155px - 13vh);
   overflow: auto;
-  margin-left: 50px;
-  margin-top: 15px;
+  position: fixed;
+  right: 50px;
+  top: 135px;
+  z-index: 100;
 }
 
 .title_artist {
@@ -269,7 +245,7 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  width:330px;
+  width:310px;
 }
 
 .imageurl {
@@ -402,5 +378,338 @@ body {
 
 
 
+.chat-container {
+  position: fixed;
+  left: 50%;
+  top: 135px;
+  transform: translateX(-50%);
+  width: 400px;
+}
+
+.chat-timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.timer-display {
+  margin: 0;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+#Chat {
+  width: 400px;
+}
+
+#messages {
+  width: 400px;
+  height: 200px;
+  background-color: white;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 1px;
+  word-wrap: break-word;  /* Ensures long messages break into new lines */
+  line-height: 1.25;  /* Slightly tight line height for better readability */
+}
+
+#messages p {
+  margin: 0 0 1px 0;  /* Remove default margins from <p> and add small space between messages */
+}
 
 
+#message-input {
+  width: 400px;
+  height: 25px;
+}
+
+/* Ensure the popup is positioned below the chat */
+.popup {
+  width: 440px;
+  background: white;
+  border-radius: 10px;
+  border: #fff 1px solid;
+  position: absolute;
+  top: 68%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  visibility: hidden; /* Keep the popup hidden by default */
+}
+
+/* Make the popup visible */
+.open-popup {
+  visibility: visible;
+}
+
+/* Table Styling */
+#popup_table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#popup_table td, #popup_table th {
+  border: 1px solid #ddd;
+  padding: 4px;
+}
+
+/* ===== MULTIPLAYER STYLES ===== */
+
+/* Compact leaderboard */
+#leaderboard-container {
+    max-width: 400px;
+    max-height: 450px;
+    border: 1px solid #ccc;
+    background: white;
+    margin-top: 30px;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.leaderboard-header {
+    background: #ffffff;
+    color: rgb(0, 0, 0);
+    margin: 0;
+    padding: 6px;
+    text-align: center;
+    font-size: 16px;
+}
+
+#leaderboard-container > #leaderboard-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+#leaderboard-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.leaderboard-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 5px;
+    margin: 1px 0;
+    background: #f9f9f9;
+    font-size: 12px;
+}
+
+.leaderboard-entry.first-place {
+    background: #FFD700;
+    font-weight: bold;
+}
+
+.leaderboard-entry.second-place {
+    background: #C0C0C0;
+    font-weight: bold;
+}
+
+.leaderboard-entry.third-place {
+    background: #CD7F32;
+    font-weight: bold;
+}
+
+.leaderboard-entry.disconnected {
+    opacity: 0.5;
+    font-style: italic;
+}
+
+.leaderboard-entry .rank {
+    font-weight: bold;
+    color: #5f48d4;
+    margin-right: 8px;
+    min-width: 20px;
+    font-size: 11px;
+}
+
+.leaderboard-entry .username {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.leaderboard-entry .score {
+    font-weight: bold;
+    color: black;
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+/* Timer */
+#timer-container {
+    margin: 50px 0 15px 0;
+    text-align: center;
+}
+
+#timer {
+    font-size: 24px;
+    font-weight: bold;
+    color: #58c777;
+}
+
+#timer-bar-container {
+    width: 350px;
+    height: 12px;
+    background: #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+#timer-bar {
+    height: 100%;
+    background: #58c777;
+    border-radius: 6px;
+    transition: width 0.1s linear, background 0.3s;
+}
+
+#timer-bar.warning {
+    background: #e0a604;
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 80px;
+    left: -350px;
+    background: #58c777;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: left 0.3s ease;
+    z-index: 1000;
+    max-width: 300px;
+    font-weight: 500;
+}
+
+.notification.show {
+    left: 95px;
+}
+
+.notification.notification-success {
+    background: #58c777;
+}
+
+.notification.notification-info {
+    background: #5f48d4;
+}
+
+.notification.notification-warning {
+    background: #e0a604;
+}
+
+/* Answer display */
+#answer {
+    background: #f0f6ff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    text-align: center;
+    font-size: 18px;
+    border: 2px solid #0099ff;
+    width: 400px;
+    display: none;
+}
+
+#audio-player {
+    margin-bottom: 15px;
+}
+
+/* Artwork sizing for multiplayer */
+#artwork {
+    width: 200px;
+    height: 200px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    margin: 10px 0;
+}
+
+/* Cycle complete popup */
+.cycle-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.cycle-popup {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.cycle-popup h2 {
+    margin: 0 0 10px 0;
+    color: #0099ff;
+    text-align: center;
+    font-size: 28px;
+}
+
+.cycle-popup h3 {
+    margin: 0 0 20px 0;
+    color: #666;
+    text-align: center;
+    font-size: 18px;
+}
+
+.top3-list {
+    margin-bottom: 20px;
+}
+
+.top3-entry {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    margin: 10px 0;
+    background: #f0f6ff;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+.top3-entry .medal {
+    font-size: 32px;
+    margin-right: 15px;
+}
+
+.top3-entry .player-name {
+    font-weight: bold;
+    flex: 1;
+    font-size: 18px;
+}
+
+.top3-entry .player-stats {
+    color: #666;
+    font-size: 14px;
+}
+
+.close-popup {
+    width: 100%;
+    padding: 12px;
+    background: #0099ff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.close-popup:hover {
+    background: #0077cc;
+}
