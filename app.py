@@ -20,6 +20,9 @@ import threading
 import pandas as pd
 from datetime import datetime
 
+import eventlet
+eventlet.monkey_patch()
+
 from pyngrok import ngrok
 
 from flask_socketio import SocketIO, send, emit, join_room, leave_room
@@ -1240,6 +1243,5 @@ def billion_info(stat, period):
 
 
 if __name__ == '__main__':
-    # Use socketio.run for multiplayer support and bind to Render's PORT when present.
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, use_reloader=False)
