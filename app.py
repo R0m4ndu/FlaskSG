@@ -33,10 +33,10 @@ from config import ROUNDS_PER_GAME, SONG_DURATION, DELAY_BETWEEN_ROUNDS, LEADERB
 # print(" * ngrok tunnel:", public_url)
 
 app = Flask(__name__, template_folder='template')
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
 
 # Configure session to use filesystem (instead of signed cookies)
-app.secret_key = 'TODO: CHANGE ONE DAY'
+app.secret_key = os.environ.get('SECRET_KEY', 'TODO: CHANGE ONE DAY')
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
@@ -1240,6 +1240,6 @@ def billion_info(stat, period):
 
 
 if __name__ == '__main__':
-    # Use socketio.run for multiplayer support
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
-    # For production: socketio.run(app, host="0.0.0.0", port=5000)
+    # Use socketio.run for multiplayer support and bind to Render's PORT when present.
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
