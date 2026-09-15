@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <title>To-Do List</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      padding: 2rem;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    input, textarea {
+      width: 70%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 0.5rem;
+    }
+
+    button:hover {
+      background-color: #808080;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 1rem;
+    }
+
+    li {
+      background: #fff;
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .description, .due-date {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 0.3rem;
+    }
+
+    .completed {
+      background-color: #d4edda;
+    }
+
+    #loginSection {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .actions {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .delete-btn {
+      background-color: #AA2F33;
+    }
+
+    .edit-btn {
+      background-color: #1976d2;
+    }
+
+    .complete-btn {
+      background-color: #388e3c;
+    }
+  </style>
+</head>
+<body>
+  <h1>📝 Môj To-Do List</h1>
+
+  <!-- Login sekcia -->
+  <div id="loginSection">
+    <input type="text" id="menoPouzivatela" placeholder="Zadaj svoje meno *" required>
+    <br>
+    <button onclick="prihlasitSa()">Prihlásiť sa</button>
+  </div>
+
+  <!-- Pridávanie úloh -->
+  <div id="taskSection" style="text-align: center; display: none;">
+    <input type="text" id="novaUloha" placeholder="Zadaj názov úlohy *" required>
+    <br>
+    <textarea id="popisUlohy" placeholder="Zadaj popis úlohy (nepovinné)"></textarea>
+    <br>
+    <input type="date" id="doKedy">
+    <br>
+    <button onclick="pridajUlohu()">Pridať úlohu</button>
+  </div>
+
+  <!-- Zoznam úloh -->
+  <ul id="ulohyZoznam"></ul>
+
+  <script>
+    let aktualnyPouzivatel = null;
+    const URL = "http://82.25.97.52:8095";
+    //const URL = "http://127.0.0.1:5000";
+
+    function prihlasitSa() {
+      const meno = document.getElementById("menoPouzivatela").value.trim();
+      if (!meno) {
+        alert("Prosím, zadaj svoje meno!");
+        return;
+      }
+      aktualnyPouzivatel = meno;
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("taskSection").style.display = "block";
+      nacitajUlohy();
+    }
+
+    async function nacitajUlohy() {
+      try {
+        const res = await fetch(`${URL}/ulohy?user_name=${encodeURIComponent(aktualnyPouzivatel)}`);
+        const data = await res.json();
+        renderUlohy(data);
+      } catch (err) {
+        console.error("Chyba pri načítaní úloh:", err);
+      }
+    }
+
+    async function pridajUlohu() {
+      const text = document.getElementById("novaUloha").value.trim();
+      const description = document.getElementById("popisUlohy").value.trim();
+      const due_date = document.getElementById("doKedy").value;
+
+      if (!text) {
+        alert("Názov úlohy je povinný!");
+        return;
+      }
+
+      try {
+        await fetch(`${URL}/ulohy`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            description,
+            due_date,
+            done: false,
+            user_name: aktualnyPouzivatel
+          })
+        });
+
+        document.getElementById("novaUloha").value = "";
+        document.getElementById("popisUlohy").value = "";
+        document.getElementById("doKedy").value = "";
+        nacitajUlohy();
+      } catch (err) {
+        console.error("Chyba pri pridávaní úlohy:", err);
+      }
+    }
+
+    function renderUlohy(data) {
+      const zoznam = document.getElementById("ulohyZoznam");
+      zoznam.innerHTML = "";
+      data.forEach(uloha => {
+        const li = document.createElement("li");
+        if (uloha.done) li.classList.add("completed");
+
+        const text = document.createElement("div");
+        text.textContent = uloha.text;
+        li.appendChild(text);
+
+        if (uloha.description) {
+          const desc = document.createElement("div");
+          desc.textContent = uloha.description;
+          desc.className = "description";
+          li.appendChild(desc);
+        }
+
+        if (uloha.due_date) {
+          const due = document.createElement("div");
+          due.textContent = `Do: ${uloha.due_date}`;
+          due.className = "due-date";
+          li.appendChild(due);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const completeBtn = document.createElement("button");
+        completeBtn.className = "complete-btn";
+        completeBtn.textContent = uloha.done ? "Zrušiť splnenie" : "Splnené";
+        completeBtn.onclick = () => toggleDone(uloha);
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "edit-btn";
+        editBtn.textContent = "Upraviť";
+        editBtn.onclick = () => upravUlohu(uloha);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "Zmazať";
+        deleteBtn.onclick = () => zmazUlohu(uloha.id);
+
+        actions.appendChild(completeBtn);
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+
+        li.appendChild(actions);
+        zoznam.appendChild(li);
+      });
+    }
+
+    async function toggleDone(uloha) {
+      try {
+        await fetch(`${URL}/ulohy/${uloha.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: uloha.text,
+            description: uloha.description,
+            due_date: uloha.due_date,
+            done: !uloha.done
+          })
+        });
+        nacitajUlohy();
+      } catch (err) {
+        console.error("Chyba pri aktualizácii úlohy:", err);
+      }
+    }
+
+    async function upravUlohu(uloha) {
+      const novyText = prompt("Uprav názov úlohy:", uloha.text);
+      const novyPopis = prompt("Uprav popis úlohy:", uloha.description || "");
+      const novyDatum = prompt("Uprav dátum (rrrr-mm-dd):", uloha.due_date || "");
+
+      if (!novyText) return;
+
+      try {
+        await fetch(`${URL}/ulohy/${uloha.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: novyText,
+            description: novyPopis,
+            due_date: novyDatum,
+            done: uloha.done
+          })
+        });
+        nacitajUlohy();
+      } catch (err) {
+        console.error("Chyba pri úprave úlohy:", err);
+      }
+    }
+
+    async function zmazUlohu(id) {
+      try {
+        await fetch(`${URL}/ulohy/${id}`, {
+          method: "DELETE"
+        });
+        nacitajUlohy();
+      } catch (err) {
+        console.error("Chyba pri mazaní úlohy:", err);
+      }
+    }
+  </script>
+</body>
+</html>

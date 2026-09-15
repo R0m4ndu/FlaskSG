@@ -6,6 +6,8 @@
 # Ported from client-side JavaScript validation logic
 
 import math
+from unidecode import unidecode
+import time
 
 
 # Artist abbreviations dictionary
@@ -15,11 +17,11 @@ ABBREVIATIONS = {
     'ccr': 'creedence clearwater revival',
     'elo': 'electric light orchestra',
     'fgth': 'frankie goes to hollywood',
-    'jsbx': 'jon spencer blues explosion',
+    'jsbx': 'the jon spencer blues explosion',
     'mcr': 'my chemical romance',
     'nkotb': 'new kids on the block',
     'omd': 'orchestral manoeuvres in the dark',
-    'pusa': 'presidents of the united states of america',
+    'pusa': 'the presidents of the united states of america',
     'qotsa': 'queens of the stone age',
     'ratm': 'rage against the machine',
     'rhcp': 'red hot chili peppers',
@@ -28,14 +30,26 @@ ABBREVIATIONS = {
     'atcq': 'a tribe called quest',
     'tdcc': 'two door cinema club',
     '5sos': '5 seconds of summer',
+    'nbhd': 'the neighbourhood',
+    'bto': 'bachman-turner overdrive',
+    '30stm': 'thirty seconds to mars',
+    'ffdp': 'five finger death punch',
+    '5fdp': 'five finger death punch',
+    'a7x': 'avenged sevenfold',
+    'cas': 'cigarettes after sex',
+    'patd': 'panic! at the disco',
+    'p!atd': 'panic! at the disco',
+    'top': 'twenty one pilots',
 }
 
 
 def extract_artists(title, artist):
+
     """
     Extract all valid artist variations from artist and title fields
     Returns a set of possible artist strings to match against
     """
+
     title = title.lower()
     artist = artist.lower()
 
@@ -77,7 +91,17 @@ def extract_artists(title, artist):
 
         # Remove "the " prefix
         if element.startswith('the '):
-            artists.add(element[4:])
+            without_the = element[4:]
+            artists.add(without_the)
+            artists.add(unidecode(without_the))
+            
+            # Also remove special characters from the version without "the"
+            cleaned_without_the = without_the
+            for char in ['.', '-', "'", '!', '?']:
+                cleaned_without_the = cleaned_without_the.replace(char, '')
+            if cleaned_without_the != without_the:
+                artists.add(cleaned_without_the)
+                artists.add(unidecode(cleaned_without_the))
 
         # Remove special characters
         cleaned = element
@@ -85,6 +109,13 @@ def extract_artists(title, artist):
             cleaned = cleaned.replace(char, '')
         if cleaned != element:
             artists.add(cleaned)
+
+    artists.update(unidecode(s) for s in artists.copy())
+
+    if 'the jimi hendrix experience' in artists:
+        artists.add('jimi hendrix')
+
+    print(artists)
 
     return artists
 
@@ -132,6 +163,8 @@ def extract_titles(title, room):
     # Remove empty strings
     titles = {t for t in titles if t.strip()}
 
+    titles.update(unidecode(s) for s in titles.copy())
+
     return titles
 
 
@@ -173,10 +206,13 @@ def validate_guess(guess, artist, title, room):
     Returns:
         dict: {'artist': bool, 'title': bool} indicating what was guessed correctly
     """
+    ABBR = False
+
     guess = guess.lower().strip()
 
     artists = extract_artists(title, artist)
     titles = extract_titles(title, room)
+
 
     artist_match = False
     title_match = False
@@ -191,6 +227,7 @@ def validate_guess(guess, artist, title, room):
         # Abbreviations require exact match
         if a in ABBREVIATIONS:
             if distance == 0:
+                ABBR = True
                 artist_match = True
                 break
         else:
@@ -198,7 +235,19 @@ def validate_guess(guess, artist, title, room):
                 artist_match = True
                 break
 
-    # Check title match
+    shortest_artist = min(artists, key=len) if artists else ""
+    if shortest_artist in ABBREVIATIONS:
+        threshold_artist = 0
+    else:
+        threshold_artist = round(math.log(len(shortest_artist))) if len(shortest_artist) > 1 else 0
+
+    shortest_title = min(titles, key=len) if titles else ""
+    threshold_title = round(math.log(len(shortest_title))) if len(shortest_title) > 1 else 0
+
+    total = len(shortest_title)-threshold_title + len(shortest_artist)-threshold_artist + 1
+
+    required_time = round(1+total*0.1, 1)
+
     for t in titles:
         if not t:
             continue

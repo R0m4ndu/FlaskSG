@@ -11,8 +11,9 @@ from config import ROUNDS_PER_GAME
 class PlayerState:
     """Represents a player's state within a game room"""
 
-    def __init__(self, username):
+    def __init__(self, username, socket_id=None):
         self.username = username
+        self.socket_id = socket_id
         self.score = 0  # Resets each 10-round cycle
         self.total_score = 0  # Cumulative across all cycles
         self.connected = True
@@ -35,18 +36,20 @@ class GameRoom:
         self.cycle_count = 0  # Number of cycles completed
         self.played_songs = []  # List of recently played songs
         self.round_id = 0  # Unique ID for each round to prevent duplicate timers
+        self.round_timer = None  # Timer object for cancelling early round end
 
     def get_current_round_in_cycle(self):
         """Returns current position in cycle (1 to ROUNDS_PER_GAME)"""
         return ((self.current_round - 1) % ROUNDS_PER_GAME) + 1
 
-    def add_player(self, username):
+    def add_player(self, username, socket_id=None):
         """Add a new player to the room"""
         if username not in self.players:
-            self.players[username] = PlayerState(username)
+            self.players[username] = PlayerState(username, socket_id)
         else:
             # Player rejoining
             self.players[username].connected = True
+            self.players[username].socket_id = socket_id
 
     def remove_player(self, username):
         """Mark a player as disconnected"""

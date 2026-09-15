@@ -9,17 +9,41 @@
     <div class="top-info">
         <span><b>Active Room: {{room}}</b> ({{song_count}} tracks)</span>
         <span id="count" style="margin-left: 30px;">Waiting for round...</span>
+        {% if room == "Billion" %}
+        <span style="margin-left: 30px;">
+            <a href="{{url_for('billion_info', stat='')}}" target="_blank" style="color: #0099ff; text-decoration: none; font-weight: bold;">📊 See here future Billion songs</a>
+        </span>
+        {% endif %}
     </div>
 
     <div class="gameplay">
         <div style="display: flex; align-items: center; gap: 10px; margin-top: 50px; margin-bottom: 15px;">
+            <button id="play-pause-btn" class="control-btn" onclick="togglePlayPause()">
+                <svg id="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <svg id="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                </svg>
+            </button>
             <div id="timer-bar-container">
                 <div id="timer-bar"></div>
             </div>
             <span id="timer" style="font-size: 18px; font-weight: bold; color: #58c777; min-width: 30px;">{{song_duration}}</span>
+            <div class="volume-control">
+                <div class="volume-icon" onclick="toggleVolumeSlider()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                    </svg>
+                </div>
+                <div class="volume-slider-container" id="volume-slider-container">
+                    <input type="range" id="volume-slider" min="0" max="100" value="100" oninput="changeVolume(this.value)" orient="vertical">
+                </div>
+            </div>
         </div>
 
-        <audio id="audio-player" controls autoplay>
+        <audio id="audio-player" autoplay>
             <source src="" id="audio-source">
         </audio>
 
@@ -39,6 +63,9 @@
         </div>
     </div>
 
+{% endblock %}
+
+{% block chat %}
     <div class="chat-container">
         <div id="Chat" class="Chat">
             <div id="messages"></div>
@@ -126,6 +153,54 @@
         let roundPoints = 0; // Track cumulative points for current round
         let playerStates = {}; // Track each player's current state in the round
 
+        // Audio control functions
+        function togglePlayPause() {
+            const audio = document.getElementById('audio-player');
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+
+            if (audio.paused) {
+                audio.play();
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                audio.pause();
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
+        }
+
+        function changeVolume(value) {
+            const audio = document.getElementById('audio-player');
+            audio.volume = value / 100;
+        }
+
+        function toggleVolumeSlider() {
+            const sliderContainer = document.getElementById('volume-slider-container');
+            sliderContainer.classList.toggle('show');
+        }
+
+        // Close volume slider when clicking outside
+        document.addEventListener('click', function(event) {
+            const volumeControl = document.querySelector('.volume-control');
+            const sliderContainer = document.getElementById('volume-slider-container');
+
+            if (volumeControl && !volumeControl.contains(event.target)) {
+                sliderContainer.classList.remove('show');
+            }
+        });
+
+        // Update play/pause button when audio state changes
+        const audioPlayer = document.getElementById('audio-player');
+        audioPlayer.addEventListener('play', () => {
+            document.getElementById('play-icon').style.display = 'none';
+            document.getElementById('pause-icon').style.display = 'block';
+        });
+        audioPlayer.addEventListener('pause', () => {
+            document.getElementById('play-icon').style.display = 'block';
+            document.getElementById('pause-icon').style.display = 'none';
+        });
+
         // Join game on page load
         socket.on('connect', () => {
             console.log('Connected to server');
@@ -133,9 +208,16 @@
             socket.emit('join_game', {room_name: room});
         });
 
+        socket.on('join_rejected', (data) => {
+            alert(data.message);
+            window.location.href = '/';
+        });
+
         // Game configuration (from server)
         const ROUNDS_PER_GAME = {{rounds_per_game}};
         const SONG_DURATION = {{song_duration}};
+        const DELAY_BETWEEN_ROUNDS = {{delay_between_rounds}};
+        const LEADERBOARD_TIME = {{leaderboard_time}};
 
         // Initial game state
         socket.on('game_state', (data) => {
@@ -181,7 +263,9 @@
             const guessbox = document.getElementById('guessbox');
             guessbox.disabled = false;
             guessbox.value = '';
-            guessbox.focus();
+            if (document.activeElement.id !== 'message-input') {
+                guessbox.focus();
+            }
 
             // Update leaderboard
             updateLeaderboard(data.leaderboard);
@@ -190,6 +274,9 @@
             if (data.played_songs !== undefined) {
                 updatePlayedSongs(data.played_songs);
             }
+
+            // Stop any existing timer (like delay timer) before starting new round timer
+            stopTimer();
 
             // Start timer
             startTimer(SONG_DURATION);
@@ -261,20 +348,38 @@
             answerEl.innerHTML = `<b>${data.artist}</b> - ${data.title}`;
             answerEl.style.display = 'block';
 
-            // Update leaderboard
-            updateLeaderboard(data.leaderboard);
+            // Update leaderboard (only if provided, last round won't have it)
+            if (data.leaderboard) {
+                updateLeaderboard(data.leaderboard);
+            }
 
             // Update played songs list
             if (data.played_songs) {
                 updatePlayedSongs(data.played_songs);
             }
 
-            // Show cycle complete popup if this was round 10
+            // Start delay timer countdown
+            startDelayTimer(DELAY_BETWEEN_ROUNDS);
+
+            // Next round starts automatically from server after DELAY_BETWEEN_ROUNDS seconds
+        });
+
+        // Final leaderboard (shown after last round)
+        socket.on('final_leaderboard', (data) => {
+            console.log('Final leaderboard:', data);
+
+            // Update leaderboard
+            updateLeaderboard(data.leaderboard);
+
+            // Show cycle complete popup with top 3
             if (data.cycle_complete && data.top_3) {
                 showCycleCompletePopup(data.top_3);
             }
 
-            // Next round starts automatically from server after 5s
+            // Start leaderboard timer countdown
+            startDelayTimer(LEADERBOARD_TIME);
+
+            // Next round starts automatically from server after LEADERBOARD_TIME seconds
         });
 
         // Submit guess
@@ -295,32 +400,46 @@
 
         // Timer functions
         function startTimer(seconds) {
-            let remaining = seconds;
+            // Always stop any existing timer first
+            stopTimer();
+
             const timerEl = document.getElementById('timer');
             const timerBar = document.getElementById('timer-bar');
 
-            timerEl.textContent = remaining;
+            // Check if elements exist
+            if (!timerEl || !timerBar) {
+                console.error('Timer elements not found');
+                return;
+            }
+
+            let remaining = seconds;
+            timerEl.textContent = remaining.toFixed(1);
             timerBar.style.width = '100%';
             timerBar.className = '';
 
             timerInterval = setInterval(() => {
-                remaining -= 0.1;
+                try {
+                    remaining -= 0.1;
 
-                if (remaining <= 0) {
+                    if (remaining <= 0) {
+                        stopTimer();
+                        timerEl.textContent = '0.0';
+                        timerBar.style.width = '0%';
+                        return;
+                    }
+
+                    timerEl.textContent = remaining.toFixed(1);
+                    timerBar.style.width = `${(remaining / seconds) * 100}%`;
+
+                    // Change color in last 3 seconds
+                    if (remaining < 3) {
+                        timerBar.classList.add('warning');
+                    } else {
+                        timerBar.classList.remove('warning');
+                    }
+                } catch (e) {
+                    console.error('Timer error:', e);
                     stopTimer();
-                    timerEl.textContent = '0';
-                    timerBar.style.width = '0%';
-                    return;
-                }
-
-                timerEl.textContent = Math.ceil(remaining);
-                timerBar.style.width = `${(remaining / seconds) * 100}%`;
-
-                // Change color in last 3 seconds
-                if (remaining < 3) {
-                    timerBar.classList.add('warning');
-                } else {
-                    timerBar.classList.remove('warning');
                 }
             }, 100);
         }
@@ -330,6 +449,45 @@
                 clearInterval(timerInterval);
                 timerInterval = null;
             }
+        }
+
+        // Delay timer between rounds
+        function startDelayTimer(seconds) {
+            // Always stop any existing timer first
+            stopTimer();
+
+            const timerEl = document.getElementById('timer');
+            const timerBar = document.getElementById('timer-bar');
+
+            // Check if elements exist
+            if (!timerEl || !timerBar) {
+                console.error('Timer elements not found');
+                return;
+            }
+
+            let remaining = seconds;
+            timerEl.textContent = remaining.toFixed(1);
+            timerBar.style.width = '100%';
+            timerBar.className = 'delay';
+
+            timerInterval = setInterval(() => {
+                try {
+                    remaining -= 0.1;
+
+                    if (remaining <= 0) {
+                        stopTimer();
+                        timerEl.textContent = '0.0';
+                        timerBar.style.width = '0%';
+                        return;
+                    }
+
+                    timerEl.textContent = remaining.toFixed(1);
+                    timerBar.style.width = `${(remaining / seconds) * 100}%`;
+                } catch (e) {
+                    console.error('Delay timer error:', e);
+                    stopTimer();
+                }
+            }, 100);
         }
 
         // Leaderboard
@@ -359,14 +517,16 @@
                 let nameColor = '';
                 if (state.guessed_artist && state.guessed_title) {
                     nameColor = '#2E7D32'; // Darker green for both
-                } else if (state.guessed_artist || state.guessed_title) {
-                    nameColor = '#4169E1'; // Blue for either artist or title
+                } else if (state.guessed_artist) {
+                    nameColor = '#4169E1'; // Blue for guessed artist
+                } else if (state.guessed_title) {
+                    nameColor = '#800080'; // Purple for guessed title
                 }
 
                 const nameStyle = nameColor ? `style="color: ${nameColor};"` : '';
 
                 // Add guess time if available
-                const timeDisplay = player.guess_time !== null ? ` (${player.guess_time}s)` : '';
+                const timeDisplay = player.guess_time !== null ? ` (${parseFloat(player.guess_time).toFixed(3)}s)` : '';
 
                 // Add round points indicator if any
                 let pointsDisplay = '';
@@ -376,7 +536,7 @@
 
                 li.innerHTML = `
                     <span class="rank">#${index + 1}</span>
-                    <span class="username" ${nameStyle}>${player.username}${pointsDisplay}${timeDisplay}</span>
+                    <span class="username" ${nameStyle}><a href="/profile/${player.username}" target="_blank" style="text-decoration: none; color: inherit;">${player.username}</a>${pointsDisplay}${timeDisplay}</span>
                     <span class="score">${player.score}</span>
                 `;
                 list.appendChild(li);
@@ -395,16 +555,30 @@
                 div.className = 'song_container';
 
                 let recordText = '';
+                let metaText = '';
+
+                const metaParts = [];
+                if (song.year) {
+                    metaParts.push(song.year);
+                }
+                if (song.min_time) {
+                    metaParts.push(song.min_time);
+                }
+                if (metaParts.length > 0) {
+                    metaText = ` <span style="float: right;">${metaParts.join(' • ')}</span>`;
+                }
+
                 if (song.record && song.record !== 0) {
-                    recordText = `<p><b>Recordholder: </b>${song.player} (${song.record})</p>`;
+                    recordText = `<p><b>Recordholder: </b>${song.player} (${parseFloat(song.record).toFixed(3)})${metaText}</p>`;
                 } else {
-                    recordText = '<p><b>Recordholder: </b></p>';
+                    recordText = `<p><b>Recordholder: </b>${metaText}</p>`;
                 }
 
                 div.innerHTML = `
                     <img src="${song.artwork}" class="imageurl">
                     <div class="title_artist">
-                        <p><b>${song.artist}</b> - ${song.title}</p>
+                        <p><b>${song.artist}</b></p>
+                        <p>${song.title}</p>
                         ${recordText}
                     </div>
                 `;
@@ -439,7 +613,7 @@
             const popup = document.createElement('div');
             popup.className = 'cycle-popup';
 
-            let popupHTML = '<h2>Cycle Complete!</h2><h3>Top 3 Players</h3><div class="top3-list">';
+            let popupHTML = '<h2>The game has finished!</h2><h3>Top 3 Players</h3><div class="top3-list">';
 
             top3.forEach((player, index) => {
                 const medal = ['🥇', '🥈', '🥉'][index];
@@ -448,7 +622,7 @@
                         <span class="medal">${medal}</span>
                         <span class="player-name">${player.username}</span>
                         <span class="player-stats">
-                            Score: ${player.total_score} | Avg Time: ${player.average_time}s
+                            Score: ${player.total_score} | Avg Time: ${parseFloat(player.average_time).toFixed(3)}s
                         </span>
                     </div>
                 `;

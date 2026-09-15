@@ -7,13 +7,15 @@
 {% block body %}
 
 {{apology}}
-<form action = /log method = POST>
-    <br>
-    <input name = 'username' autocomplete = 'off' autofocus type = 'text' placeholder = 'username'>
-    <br>
-    <input name = 'password' autocomplete = 'off' autofocus type = 'password' placeholder = 'password'>
-    <br>
-    <button type = submit>Login</button>
-</form>
+<div style="margin-left: 3%; margin-top: 2%;">
+    <form action="/log" method="POST">
+        <br>
+        <input name="username" autocomplete="off" autofocus type="text" placeholder="username">
+        <br>
+        <input name="password" autocomplete="off" type="password" placeholder="password">
+        <br>
+        <button type="submit">Login</button>
+    </form>
+</div>
 
 {% endblock %}

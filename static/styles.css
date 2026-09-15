@@ -6,6 +6,7 @@
 html {
     font-size: 100%;
     box-sizing: border-box;
+    height: 100%;
 }
 
 *,
@@ -19,6 +20,7 @@ body {
     padding: 0;
     background: #e0f8ff;
     font-family: 'Roboto', sans-serif;
+    min-height: 100%;
 }
 
 
@@ -201,7 +203,7 @@ body {
   left: 0;
   background-color: #0099ff;
   width: 100%;
-  z-index: 1;
+  z-index: 100;
 }
 
 .subnav-content a {
@@ -230,7 +232,7 @@ body {
 .scroll {
   color: black;
   width: 420px;
-  height: calc(100vh - 155px - 13vh);
+  height: calc(100vh - 145px - 11vh);
   overflow: auto;
   position: fixed;
   right: 50px;
@@ -240,25 +242,31 @@ body {
 
 .title_artist {
   padding-left: 5px;
-  position: relative; bottom: 10px;
   display: inline-block;
+  width: 310px;
+  vertical-align: top;
+  padding-top: 5px;
+}
+
+.title_artist p {
+  margin: 2px 0;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  width:310px;
 }
 
 .imageurl {
   width: 50px;
   height: 50px;
-  margin-bottom: 25px;
   margin-left: 5px;
+  margin-top: 10px;
+  vertical-align: top;
 }
 
 .song_container {
   border: #ddd solid 1px;
   border-radius: 5px;
-  height: 60px;
+  height: 72px;
   font-size: 11pt;
   background: #f0f6ff;
 }
@@ -268,30 +276,50 @@ body {
 }
 
 .inputBox {
-  width: 300px;
+  width: 400px;
 }
 
 .table_container {
-  width: 40%;
+  width: 70%;
   margin: auto;
-  overflow: auto;
-  height: 600px;
-  min-width: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+  height: 85vh;
+  min-width: 600px;
 }
 
 #stats_table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
 }
 
 #stats_table td, #stats_table th {
   border: 1px solid #ddd;
   padding: 4px;
+  border-top: 0;
+  border-left: 0;
+}
+
+#stats_table td:last-child, #stats_table th:last-child {
+  border-right: 0;
+}
+
+#stats_table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 #stats_table tr:nth-child(even){background-color: white;}
 
 #stats_table tr:hover {background-color: #ddd;}
+
+#stats_table tr.hidden {display: none;}
+
+#stats_table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
 
 #stats_table th {
   padding-top: 12px;
@@ -299,6 +327,7 @@ body {
   text-align: left;
   background-color: #0099ff;
   color: white;
+  border-top: 1px solid #ddd;
 }
 
 .which_stats {
@@ -380,10 +409,10 @@ body {
 
 .chat-container {
   position: fixed;
-  left: 50%;
-  top: 135px;
-  transform: translateX(-50%);
+  left: calc(50% - 200px);
+  top: 150px;
   width: 400px;
+  z-index: 100;
 }
 
 .chat-timer-header {
@@ -534,6 +563,11 @@ body {
     font-size: 12px;
 }
 
+.leaderboard-entry .username a:hover {
+    text-decoration: underline !important;
+    cursor: pointer;
+}
+
 .leaderboard-entry .score {
     font-weight: bold;
     color: black;
@@ -554,7 +588,7 @@ body {
 }
 
 #timer-bar-container {
-    width: 350px;
+    width: 320px;
     height: 12px;
     background: #ddd;
     border-radius: 6px;
@@ -570,6 +604,10 @@ body {
 
 #timer-bar.warning {
     background: #e0a604;
+}
+
+#timer-bar.delay {
+    background: #0099ff;
 }
 
 /* Notifications */
@@ -619,6 +657,110 @@ body {
 
 #audio-player {
     margin-bottom: 15px;
+    display: none; /* Hide the audio element completely */
+}
+
+/* Custom audio controls */
+.control-btn {
+    background: #0099ff;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: background 0.3s, transform 0.1s;
+    padding: 0;
+}
+
+.control-btn:hover {
+    background: #0077cc;
+    transform: scale(1.05);
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+.volume-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-left: -15px;
+}
+
+.volume-icon {
+    color: #0099ff;
+    cursor: pointer;
+    transition: color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+}
+
+.volume-icon:hover {
+    color: #0077cc;
+}
+
+.volume-slider-container {
+    position: absolute;
+    bottom: 35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #0099ff;
+    border-radius: 8px;
+    padding: 10px 8px;
+    display: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.volume-slider-container.show {
+    display: block;
+}
+
+#volume-slider {
+    width: 6px;
+    height: 100px;
+    background: #ddd;
+    outline: none;
+    border-radius: 3px;
+    cursor: pointer;
+    writing-mode: vertical-lr;
+    direction: rtl;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #0099ff;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#volume-slider::-webkit-slider-thumb:hover {
+    background: #0077cc;
+}
+
+#volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #0099ff;
+    cursor: pointer;
+    border: none;
+    transition: background 0.3s;
+}
+
+#volume-slider::-moz-range-thumb:hover {
+    background: #0077cc;
 }
 
 /* Artwork sizing for multiplayer */
@@ -712,4 +854,52 @@ body {
 
 .close-popup:hover {
     background: #0077cc;
+}
+
+/* Responsive Design - First Breakpoint (~80% width) */
+/* Played songs move below, but gameplay and chat stay side-by-side */
+@media screen and (max-width: 1400px) {
+    /* Recently played songs - move below gameplay/leaderboard only */
+    .scroll {
+        position: absolute;
+        right: auto;
+        top: auto;
+        left: max(20px, calc(50% - 500px));
+        width: 420px;
+        height: 290px;
+        margin-top: 30px;
+        overflow-y: auto;
+    }
+
+    /* Position gameplay section - fixed width, adjustable left margin */
+    .gameplay {
+        margin-left: max(20px, calc(50% - 500px));
+        width: 420px;
+    }
+
+    /* Chat container - positioned relative to gameplay, moves with it */
+    .chat-container {
+        position: fixed;
+        left: max(490px, calc(50% - 30px));
+        right: auto;
+        top: 150px;
+        width: 400px;
+        z-index: 100;
+    }
+
+    #Chat {
+        width: 100%;
+    }
+
+    #messages {
+        width: 100%;
+    }
+
+    #message-input {
+        width: 100%;
+    }
+
+    #answer {
+        width: 100%;
+    }
 }

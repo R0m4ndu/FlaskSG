@@ -1,0 +1,116 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Future billion songs - {{ periods[period].name }}
+{% endblock %}
+
+{% block body %}
+  <br>
+  <div style="max-width: 70%; margin: 0 auto 30px auto; text-align: center;">
+    <h2 style="color: #0099ff; margin-bottom: 15px;">Songs Approaching 1 Billion Streams ({{ periods[period].name }})</h2>
+    <p style="color: #666; line-height: 1.6; margin-bottom: 10px;">
+      This page tracks Spotify songs that are on their way to reaching the 1 billion streams milestone.
+      Using real-time data from <a href="https://kworb.net/spotify/songs.html" target="_blank" style="color: #0099ff; text-decoration: none;">kworb.net</a>,
+      I calculated the estimated days that it will take for each song to hit 1 billion streams based on their current daily streaming rate. Therefore these stats are just estimates based off the current day and can change quickly.
+    </p>
+    <p style="color: #888; font-size: 0.9em;">
+      Click on column headers to sort by total streams, daily streams, or days remaining.
+    </p>
+  </div>
+
+  <div style="max-width: 70%; margin: 0 auto 20px auto; text-align: center;">
+    <div style="margin-bottom: 15px;">
+      <label for="periodSelect" style="color: #666; margin-right: 10px;">Time Period:</label>
+      <select id="periodSelect" onchange="changePeriod(this.value)"
+              style="padding: 10px 15px; font-size: 16px; border: 2px solid #0099ff; border-radius: 5px; background: white; cursor: pointer;">
+        {% for key, value in periods.items() %}
+          <option value="{{ key }}" {% if key == period %}selected{% endif %}>{{ value.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input type="text" id="searchBox" placeholder="Search songs or artists..."
+           style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #0099ff; border-radius: 5px; box-sizing: border-box;">
+  </div>
+
+  <div class = table_container style="margin-bottom: 50px;">
+    <table id="stats_table">
+    <thead>
+      <tr>
+        <th>Order</th>
+        <th>Artist and Song</th>
+        <th style = width:17.5% id = streams><a href = "{{ url_for('billion_info', stat='streams', period=period) }}" class='nolink'>Total Streams</a></th>
+        <th style = width:17.5% id = daily><a href = "{{ url_for('billion_info', stat='daily', period=period) }}" class='nolink'>Daily Streams</a></th>
+        <th style = width:17.5% id = days><a href = "{{ url_for('billion_info', stat='days', period=period) }}" class='nolink'>Days until 1b</a></th>
+        {% if period == 'combined' %}<th style="width:10%">Period</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for k,v in Database.items() %}
+        <tr>
+          <td>{{ loop.index0 + 1 }}</td>
+          <td>{{ k }}</td>
+          <td>{{ "{:,}".format(v.Streams | int).replace(',', '.') }} </td>
+          <td>{{ "{:,}".format(v.Daily | int).replace(',', '.') }} </td>
+          <td>{{ "{:,}".format(v.days).replace(',', '.') }}</td>
+          {% if period == 'combined' %}<td>{{ v.Period }}</td>{% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <script>
+    var stat = '{{stat}}'
+    var currentPeriod = '{{period}}'
+
+    // Function to change period
+    function changePeriod(period) {
+      window.location.href = '/billion_info/' + (stat || 'days') + '/' + period;
+    }
+
+    if (stat == "daily") {
+      document.getElementById("daily").style.backgroundColor = "#0066ff";
+    }
+    else if (stat == "streams") {
+      document.getElementById("streams").style.backgroundColor = "#0066ff";
+    }
+    else {
+      document.getElementById("days").style.backgroundColor = "#0066ff";
+    }
+
+    // Live search functionality - optimized for speed with unicode normalization
+    var table = document.getElementById("stats_table");
+    var rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+    // Function to remove accents/diacritics
+    function normalizeText(text) {
+      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    document.getElementById("searchBox").addEventListener("input", function() {
+      var input = normalizeText(this.value);
+      var minLength = currentPeriod === 'combined' ? 3 : 2;
+
+      // Only search if minimum characters are typed
+      if (input.length < minLength) {
+        // Show all rows if below minimum
+        for (var i = 0; i < rows.length; i++) {
+          rows[i].style.display = "";
+        }
+        return;
+      }
+
+      // Fast loop through rows
+      for (var i = 0; i < rows.length; i++) {
+        // Only search in the Artist and Song column (index 1)
+        var artistSongCell = rows[i].cells[1];
+        var cellText = normalizeText(artistSongCell.textContent);
+
+        // Show or hide the row based on whether a match was found
+        rows[i].style.display = cellText.indexOf(input) > -1 ? "" : "none";
+      }
+    });
+
+  </script>
+
+{% endblock %}

@@ -13,7 +13,7 @@
 
   <div class="mySlides fade">
     <a href = "room/{{rooms[room]}}"><img src={{images[room]}} class = 'ImageHome'>
-    <button class="text">{{rooms[room]}}</button>
+    <button class="text">{{rooms[room]}} (<span class="player-count" data-room="{{rooms[room]}}">{{players_per_room[rooms[room]]}}</span> players)</button>
     </a>
   </div>
 
@@ -29,11 +29,22 @@
 <!-- The dots/circles -->
 <div style="text-align:center">
    {% for room in range(length_images) %}
-  <span class="dot" onclick="currentSlide({{room}})"></span>
+  <span class="dot" onclick="currentSlide({{room + 1}})"></span>
   {% endfor %}
 </div>
 
 <p style=text-align:center><b>Select a room to start Playing!</b></p>
+
+<script>
+  const homeSocket = io();
+
+  homeSocket.on('player_counts_update', (data) => {
+    document.querySelectorAll('.player-count').forEach((countElement) => {
+      const roomName = countElement.dataset.room;
+      countElement.textContent = data.players_per_room[roomName] ?? 0;
+    });
+  });
+</script>
 
 <script>
     let slideIndex = 1;

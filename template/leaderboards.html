@@ -14,6 +14,7 @@
         <th>Username</th>
         <th style = width:17.5% id = score><a href = "{{ url_for('leaderboards', stat='Scores') }}" class='nolink'>Score</a></th>
         <th style = width:17.5% id = mgt><a href = "{{ url_for('leaderboards', stat='MGT') }}" class='nolink'>Mean Time</a></th>
+        <th style = width:17.5% id = wins><a href = "{{ url_for('leaderboards', stat='wins') }}" class='nolink'>Wins</a></th>
       </tr>
     </thead>
     <tbody>
@@ -27,6 +28,7 @@
           {% endif %}
           <td>{{ row.Score }} </td>
           <td>{{ row.MGT }} </td>
+          <td>{{ row.wins or 0 }} </td>
         </tr>
       {% endfor %}
     </tbody>
@@ -38,7 +40,9 @@
     if (stat == "MGT") {
       document.getElementById("mgt").style.backgroundColor = "#0066ff";
     }
-
+    else if (stat == "wins") {
+      document.getElementById("wins").style.backgroundColor = "#0066ff";
+    }
     else {
       document.getElementById("score").style.backgroundColor = "#0066ff";
     }
