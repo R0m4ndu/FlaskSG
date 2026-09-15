@@ -1,0 +1,9 @@
+Flask
+Flask-Session
+Flask-SocketIO
+cs50
+pandas
+pyngrok
+requests
+gunicorn
+eventlet
